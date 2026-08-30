@@ -62,15 +62,20 @@ const ProfileSlider = ({ isOpen, onClose }) => {
             {/* User Info */}
             <div className="p-8 text-center">
               <div className="inline-block relative mb-6">
-                <div className="h-24 w-24 rounded-3xl bg-emerald-600 flex items-center justify-center text-white text-4xl font-black shadow-xl">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className="h-24 w-24 rounded-3xl bg-emerald-600 border-2 border-emerald-500/40 flex items-center justify-center text-white text-4xl font-black shadow-xl overflow-hidden">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
+                  ) : (
+                    user.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="absolute -bottom-2 -right-2 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border" style={{ borderColor: 'var(--border-color)' }}>
                   <User className="h-4 w-4 text-emerald-600" />
                 </div>
               </div>
               <h3 className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>{user.name}</h3>
-              <p className="font-medium" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+              <p className="font-medium text-xs text-emerald-400 mt-0.5">{user.job_title || 'Team Member'}</p>
+              <p className="font-medium text-xs" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
             </div>
 
             {/* Stats */}
@@ -90,23 +95,22 @@ const ProfileSlider = ({ isOpen, onClose }) => {
             </div>
 
             {/* Account Details */}
-            <div className="px-8 space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-2xl border" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
-                  <Mail className="h-5 w-5 text-emerald-600" />
-                  <div className="overflow-hidden">
-                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Email Address</p>
-                    <p className="text-sm font-bold truncate" style={{ color: 'var(--text-main)' }}>{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 rounded-2xl border" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
-                  <Briefcase className="h-5 w-5 text-emerald-600" />
-                  <div className="overflow-hidden">
-                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Current Status</p>
-                    <p className="text-sm font-bold truncate" style={{ color: 'var(--text-main)' }}>Professional Plan</p>
-                  </div>
+            <div className="px-8 space-y-4">
+              <div className="flex items-center gap-4 p-4 rounded-2xl border" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
+                <Mail className="h-5 w-5 text-emerald-600" />
+                <div className="overflow-hidden">
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Email Address</p>
+                  <p className="text-sm font-bold truncate" style={{ color: 'var(--text-main)' }}>{user.email}</p>
                 </div>
               </div>
+              
+              <a 
+                href="/profile"
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 p-3 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-2xl font-bold text-xs border border-emerald-500/20 transition-all"
+              >
+                Edit Full Profile Settings
+              </a>
             </div>
           </div>
 

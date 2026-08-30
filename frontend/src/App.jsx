@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 import Profile from './pages/Profile';
+import PublicProjectView from './pages/PublicProjectView';
 import ProfileSlider from './components/ProfileSlider';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthContext } from './AuthContextInstance';
@@ -27,6 +28,7 @@ function App() {
         <ProfileSlider isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         <main className="flex-1 flex flex-col">
           <Routes>
+            <Route path="/share/:token" element={<PublicProjectView />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route 

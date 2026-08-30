@@ -83,12 +83,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           {/* User Section */}
           <div className="p-4 border-t space-y-2" style={{ borderColor: 'var(--border-color)' }}>
             <div className="px-4 py-3 rounded-xl flex items-center gap-3" style={{ backgroundColor: 'var(--bg-main)' }}>
-              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm">
-                {user.name.charAt(0).toUpperCase()}
+              <div className="h-8 w-8 rounded-full bg-emerald-600 border border-emerald-500/30 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
+                ) : (
+                  user.name.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-black truncate" style={{ color: 'var(--text-main)' }}>{user.name}</p>
-                <p className="text-[10px] font-bold truncate" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+                <p className="text-[10px] font-bold truncate" style={{ color: 'var(--text-muted)' }}>{user.job_title || user.email}</p>
               </div>
             </div>
             <button

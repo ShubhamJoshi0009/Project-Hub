@@ -10,6 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { AuthContext } from '../AuthContextInstance';
+import NotificationCenter from './NotificationCenter';
 
 const Header = ({ onProfileClick }) => {
   const { user, logout } = useContext(AuthContext);
@@ -83,21 +84,26 @@ const Header = ({ onProfileClick }) => {
           )}
 
           {/* Right Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             
             {user && (
               <>
-                <div className="hidden md:block h-8 w-px bg-slate-800 mx-2" />
+                <NotificationCenter />
+                <div className="hidden md:block h-8 w-px bg-slate-800 mx-1" />
                 <button 
                   onClick={onProfileClick}
                   className="hidden md:flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-emerald-500/10 transition-all group"
                 >
-                  <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-                    {user.name.charAt(0).toUpperCase()}
+                  <div className="h-8 w-8 rounded-full bg-emerald-600 border border-emerald-500/30 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div className="text-left hidden lg:block overflow-hidden max-w-[150px]">
                     <p className="text-xs font-black leading-none truncate" style={{ color: 'var(--text-main)' }}>{user.name}</p>
-                    <p className="text-[10px] font-bold truncate" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+                    <p className="text-[10px] font-bold truncate" style={{ color: 'var(--text-muted)' }}>{user.job_title || user.email}</p>
                   </div>
                 </button>
               </>
