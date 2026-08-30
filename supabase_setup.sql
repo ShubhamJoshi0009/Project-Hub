@@ -116,6 +116,10 @@ ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{
 ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS story_points INTEGER DEFAULT 1;
 ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
+-- Safely update status check constraint to include 'In Review'
+ALTER TABLE public.tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+ALTER TABLE public.tasks ADD CONSTRAINT tasks_status_check CHECK (status IN ('Todo', 'In Progress', 'In Review', 'Done'));
+
 -- ==============================================================================
 -- 5. Subtasks / Checklist Items Table
 -- ==============================================================================

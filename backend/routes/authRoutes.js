@@ -23,22 +23,54 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please provide name, email, and password' });
     }
 
-    // Register user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-        },
-      },
-    });
+    const trimmedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (authError) {
-      return res.status(400).json({ message: authError.message });
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
-    const userId = authData.user?.id;
+    let userId = null;
+
+    // 1. Try creating user with admin API (automatically confirms email and bypasses SMTP limits)
+    try {
+      const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: { name: trimmedName }
+      });
+
+      if (adminError) {
+        // If user already exists in auth.users
+        if (adminError.message.toLowerCase().includes('already') || adminError.status === 422) {
+          return res.status(400).json({ message: 'An account with this email already exists. Please log in.' });
+        }
+        throw adminError;
+      }
+
+      userId = adminUser?.user?.id;
+    } catch (adminFallbackErr) {
+      // 2. Fallback to standard signUp if admin API has any issue
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          data: { name: trimmedName }
+        }
+      });
+
+      if (authError) {
+        return res.status(400).json({ message: authError.message });
+      }
+
+      if (authData.user?.identities && authData.user.identities.length === 0) {
+        return res.status(400).json({ message: 'An account with this email already exists. Please log in.' });
+      }
+
+      userId = authData.user?.id;
+    }
+
     if (!userId) {
       return res.status(400).json({ message: 'User registration failed. Please try again.' });
     }
@@ -46,7 +78,7 @@ router.post('/register', async (req, res) => {
     // Create or update profile in profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .upsert([{ id: userId, name, email }], { onConflict: 'id' })
+      .upsert([{ id: userId, name: trimmedName, email: normalizedEmail }], { onConflict: 'id' })
       .select()
       .single();
 
@@ -79,38 +111,59 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ message: 'Please provide email and password' });
   }
 
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const normalizedEmail = email.trim().toLowerCase();
 
-  if (authError) {
-    return res.status(401).json({ message: 'Invalid email or password' });
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (authError || !authData?.user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const userId = authData.user.id;
+
+    // Get or auto-heal profile
+    let { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      const { data: healedProfile } = await supabase
+        .from('profiles')
+        .upsert([{
+          id: userId,
+          name: authData.user.user_metadata?.name || normalizedEmail.split('@')[0],
+          email: normalizedEmail
+        }], { onConflict: 'id' })
+        .select()
+        .single();
+
+      profile = healedProfile;
+    }
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile record could not be established.' });
+    }
+
+    res.json({
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      avatar_url: profile.avatar_url,
+      bio: profile.bio,
+      job_title: profile.job_title,
+      phone: profile.phone,
+      token: generateToken(profile.id),
+    });
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ message: error.message || 'Server error during login' });
   }
-
-  const userId = authData.user.id;
-
-  // Get profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (profileError || !profile) {
-    return res.status(404).json({ message: 'Profile not found' });
-  }
-
-  res.json({
-    id: profile.id,
-    name: profile.name,
-    email: profile.email,
-    avatar_url: profile.avatar_url,
-    bio: profile.bio,
-    job_title: profile.job_title,
-    phone: profile.phone,
-    token: generateToken(profile.id),
-  });
 });
 
 // @route GET /api/auth/me
@@ -156,7 +209,6 @@ router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
     const fileExt = file.originalname.split('.').pop() || 'jpg';
     const filePath = `avatars/${req.user.id}-${Date.now()}.${fileExt}`;
 
-    // Upload to avatars or project-attachments bucket
     const bucketName = 'project-attachments';
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
@@ -171,7 +223,6 @@ router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
       .from(bucketName)
       .getPublicUrl(filePath);
 
-    // Save avatar_url to profile
     const { data: updatedProfile, error: profileError } = await supabase
       .from('profiles')
       .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
@@ -226,11 +277,7 @@ router.get('/notifications', protect, async (req, res) => {
       .order('created_at', { ascending: false })
       .limit(30);
 
-    if (error) {
-      // Return empty array if notifications table not yet migrated
-      return res.json([]);
-    }
-
+    if (error) return res.json([]);
     res.json(notifs || []);
   } catch (err) {
     res.json([]);
@@ -287,5 +334,3 @@ router.delete('/notifications/:id', protect, async (req, res) => {
 });
 
 module.exports = router;
-
-
